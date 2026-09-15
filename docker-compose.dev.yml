@@ -1,7 +1,6 @@
 # 本地开发用的中间件：MySQL + Redis + RabbitMQ + GreptimeDB
 # 启动：docker compose -f docker-compose.dev.yml up -d
 # 停止：docker compose -f docker-compose.dev.yml down
-# 启动后需手动执行QQ群里提供的 SQL 文件初始化数据库表结构。
 # RabbitMQ 仅“问题反馈”功能使用，后端采用懒加载。不开发相关功能时可以不启动。
 services:
   mysql:
@@ -19,7 +18,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
   redis:
     image: redis:7-alpine
     container_name: weihuda-redis
