@@ -16,8 +16,7 @@
 4. 仅在调试“大物实验平台”相关功能时需要额外部署验证码识别（OCR）服务。见 [4.4](#44-captcha-验证码服务)。  
 5. 中间件：MySQL、Redis 是必须依赖，必须完成配置；
 如果需要调试问题反馈相关接口，则需要额外部署 RabbitMQ。由于 RabbitMQ 连接采用懒加载机制，仅在实际调用相关功能时才会建立连接，因此不使用问题反馈功能时无需配置 RabbitMQ。
-
-详情请见 [4. 中间件](#4-中间件)
+详情请见 [4. 外部依赖](#4-外部依赖)
 
 目前本地开发支持直接使用项目自带的 `docker-compose.dev.yml`，一键启动本地开发所需的中间件：
 
@@ -268,6 +267,6 @@ cd captcha_service
 docker build -t captcha_service .
 docker run -d -p 5000:5000 captcha_service
 ```
-- 配置在 `[captcha]` 的 `captcha_url`，填服务地址（结尾不加斜杠），本地就是 `http://localhost:5000`。  
+- 配置在 `[captcha]` 的 `captcha_url`，服务地址结尾不要添加斜杠，例如本地地址为： `http://localhost:5000`。  
 
 
