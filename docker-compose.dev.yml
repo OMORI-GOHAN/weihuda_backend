@@ -1,7 +1,6 @@
 # 本地开发用的中间件：MySQL + Redis + RabbitMQ + GreptimeDB
 # 启动：docker compose -f docker-compose.dev.yml up -d
 # 停止：docker compose -f docker-compose.dev.yml down
-# RabbitMQ 仅“问题反馈”功能使用，后端采用懒加载。不开发相关功能时可以不启动。
 services:
   mysql:
     image: mysql:8.0
@@ -28,9 +27,12 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: weihuda-rabbitmq
+    hostname: weihuda-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
   greptimedb:
     image: greptime/greptimedb:1.1.4
@@ -47,3 +49,4 @@ services:
 volumes:
   mysql_data:
   greptimedb_data:
+  rabbitmq_data:
