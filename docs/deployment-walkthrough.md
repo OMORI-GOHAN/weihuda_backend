@@ -1,7 +1,8 @@
-> 本教程以 Windows + PowerShell 为例，面向初次接触后端部署的开发者。
-> 如果你已经熟悉相关工具，可以直接阅读[部署与运行](deploy.md)。
-
 # 猴子也能学会的部署方式
+
+> 本教程以 Windows + PowerShell 为例，面向初次接触后端部署的开发者。
+>
+> 如果你已经熟悉相关工具，可以直接阅读[部署与运行](deploy.md)。
 
 >**什么**，你是否在阅读文档后依旧晕头转向，束手无策？面对 Docker、数据库和各种配置文件完全不知道从哪里下手？  
 
@@ -19,7 +20,18 @@
 微生活的后端使用 rust 进行编写，因此需要你至少对 rust 有一定了解  
 因此我们默认你已经成功配置好了 rust 的开发环境 
 
-若你目前对此还无头绪，笔者建议你先粗略地了解一番 rust 基础，并且可以自行前往B站搜索相关的下载教程
+在正式开始之前，不妨先检查一下你的 Rust 环境是否已经准备就绪。
+
+打开 PowerShell，依次执行：
+
+```powershell
+rustc --version
+cargo --version
+```
+
+如果两个命令都能正常显示版本号，说明 Rust 编译器和 Cargo 已经可以正常使用。
+
+如果提示找不到命令，可以先参考 [Rust 官方安装指南](https://www.rust-lang.org/tools/install) 完成安装。
 
 ### Git
 
@@ -153,7 +165,9 @@ cd weihuda_backend
 
 GreptimeDB 在这里用来接收后端上报的请求链路数据（Trace），帮助我们查看一次请求经过了哪些步骤、各自花了多长时间，从而排查问题。
 
-此外，我们还提供了绝赞的[可视化的链路追踪平台](#3-配置密钥与其他功能)（见`[observability]`），让你无需直接查询数据库，也能方便地查看请求耗时和执行过程。  
+此外，我们还准备了一个绝赞的可视化链路追踪平台，让你无需直接查询数据库，也能方便地查看请求耗时和执行过程。
+
+至于具体怎么使用，可以先记下这个名字。等后端成功启动后，我们会在[确认请求链路成功上报](#6-确认请求链路成功上报)一节实际体验它。
 
 它属于可选组件，不配置 Trace 上报时，后端仍可以运行，也仍会在终端输出日志。项目的 Compose 将它一起启动，是为了方便需要时调试。
 
@@ -174,6 +188,12 @@ Docker 负责把这些服务运行起来，Compose 则把它们各自需要的�
 ```powershell
 docker compose -f docker-compose.dev.yml up -d
 ```
+
+看起来有些复杂？其实这条命令可以拆成三个部分：
+
+- `-f docker-compose.dev.yml`：指定要使用的配置文件。
+- `up`：按照配置创建并启动容器。
+- `-d`：让容器在后台运行，不会一直占用当前终端。
 
 首次启动需要下载镜像，可能会等上一会儿。你可以选择配置国内镜像源来加速。
 
@@ -248,7 +268,7 @@ Copy-Item example.env .env
 
 这两个文件各有用途：`config.toml` 是后端运行时读取的配置，`.env` 则为 SQLx 编译时检查数据库提供连接地址。后面会分别填写。
 
-### 2. 告诉后端去哪里连接服务
+### 2. 填写配置文件
 
 打开 `config/config.toml`，将对应段落修改为下面的内容。这里是修改原有段落，不要在文件末尾再粘贴一套同名段落，否则 TOML 会报重复定义。
 
@@ -272,13 +292,23 @@ feedback_exchange = "feedback"
 
 MySQL 的用户名和密码都是 `root`，Redis 没有设置密码，RabbitMQ 的用户名和密码都是 `guest`。这些值对应项目 Compose 中的本地开发配置。
 
-RabbitMQ 地址最后的 `%2f` 表示名为 `/` 的虚拟主机，照着填写即可。
+RabbitMQ 地址最后的 `%2f` 表示名为 `/` 的虚拟主机，先照着填写即可。
 
 ### 3. 配置密钥与其他功能
 
 - `[captcha]`：大物实验平台使用的验证码识别服务。可以先将 `captcha_url` 写为 `http://127.0.0.1:5000`；需要调试对应功能时，再参照[部署与运行](deploy.md#captcha-验证码服务可选)启动服务，仅填写地址不会自动启动它。
 - `[pow]`：保留示例配置即可，这是绑定接口使用的工作量证明校验。
-- `[observability]`：若使用刚才启动的 GreptimeDB，我们在此提供了绝赞的可观测性。将 `endpoint` 设为 `http://127.0.0.1:4000/v1/otlp`，访问地址为`http://127.0.0.1:4000/dashboard`; 暂时不需要时，可以删除整个 `[observability]` 段，终端仍然会输出日志。
+- `[observability]`：用于配置请求链路追踪功能。
+
+  如果使用刚才启动的 GreptimeDB，将 `endpoint` 设置为：
+
+  `http://127.0.0.1:4000/v1/otlp`
+
+  配置成功后，可以通过下面的地址访问 GreptimeDB Dashboard：
+
+  http://127.0.0.1:4000/dashboard
+
+  如果暂时不需要 Trace 功能，可以删除整个 `[observability]` 配置段。后端仍然可以正常运行，并继续在终端输出日志。
 
 除了可选的 `[observability]`之外，上面提到的其他配置段，即使暂时不用对应功能，也不要直接删掉，保持和example里的默认值一致即可。
 
@@ -365,11 +395,125 @@ http://127.0.0.1:8000/ping
 
 对于需要登录的接口，要在请求头中携带 `Authorization`，值填写后端签发的 JWT 字符串。当前代码会直接解析这个值，因此不要自行在前面加上 `Bearer `。
 
-如果只是想了解接口是怎么写的，可以继续阅读[贡献指南中的接口编写示例](contributing.md#接口编写示例)
+若想了解接口具体应该如何编写，可以阅读[贡献指南中的接口编写示例](contributing.md#接口编写示例)
+
+### 3. 通过公告接口验证 MySQL 查询
+
+接下来，我们让后端实际调用中间件。
+
+先保持 `cargo run` 正在运行，再打开另一个 PowerShell 终端。下面的地址都以监听 `127.0.0.1:8000` 为例；若你改过监听端口，也要一起修改。
+
+执行：
+
+```powershell
+Invoke-RestMethod -Uri 'http://127.0.0.1:8000/announcement' -TimeoutSec 15 | ConvertTo-Json -Depth 10
+```
+
+这个接口不需要登录，会通过后端查询 MySQL 中的公告表。正常响应中的 `code` 应为 `200`，`data` 是公告数组。如果刚初始化的数据库没有公告，返回 `[]` 也是正常的。
+
+它验证了后端运行时的数据库地址、账号密码，以及公告查询所需的表和字段。
+
+如果请求失败，查看后端终端中的数据库连接或 SQL 错误；当前实现连接 MySQL 失败时可能直接退出后端，修正配置后需要重新执行 `cargo run`。
+
+### 4. 通过扫码登录码接口验证 Redis 读写
+
+我们生成一个登录码，再查询它的状态。
+
+在 PowerShell 终端依次执行：
+
+```powershell
+$qrResult = Invoke-RestMethod -Uri 'http://127.0.0.1:8000/auth-qrcode' -TimeoutSec 15
+$qrResult | ConvertTo-Json -Depth 10
+$loginCode = $qrResult.data
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/auth-qrcode/status/$loginCode" -TimeoutSec 15 | ConvertTo-Json -Depth 10
+```
+
+第一条请求应返回 `code: 200` 和一个随机登录码；如果这一步失败，先解决报错，再执行后面的查询。
+
+第二次请求应返回：
+
+```json
+{
+  "code": 200,
+  "data": "unused",
+  "msg": "请求成功"
+}
+```
+
+生成登录码时，后端会将它写入 Redis；查询状态时，再从 Redis 读取。这里直接调用缓存读写函数，若 Redis 失败会使接口报错。
+
+如果查询时已经提示“找不到二维码”，重新生成一个再尝试。
+
+### 5. 通过反馈接口验证 MySQL 写入与 RabbitMQ 投递
+
+这一步会在本地数据库中新增一条测试反馈，并产生一条真实队列消息。
+
+在 PowerShell 中执行：
+
+```powershell
+$testMarker = 'walkthrough-smoke-' + [guid]::NewGuid().ToString('N')
+$feedbackBody = @{
+    stuId = 'local-smoke-test'
+    desc = $testMarker
+    contact = 'local test only'
+} | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:8000/feedback/no_auth' -ContentType 'application/json' -Body $feedbackBody -TimeoutSec 30 | ConvertTo-Json -Depth 10
+$testMarker
+```
+
+#### 基础验证
+
+执行上面的命令后，如果接口返回 `code: 200`，说明反馈已经成功写入 MySQL。
+
+但要注意：当前后端在 RabbitMQ 投递失败时，仍可能返回反馈成功，因此这还不能证明消息已经进入队列。
+
+接下来打开 [RabbitMQ 管理页面](http://127.0.0.1:15672)，进入 `feedback_queue`。
+
+使用 **Get messages** 功能查看队列中的消息，选择 **Ack message requeue true**，避免查看后直接移除消息。
+
+如果能找到 `desc` 中包含本次 `$testMarker` 的消息，就说明本次本地测试的消息已成功进入队列。
+
+注意：如果已有消费者正在运行，消息也可能被消费者提前取走。这时不能仅凭队列为空断
+定消息投递失败。
+
+#### 进阶验证：检查数据并清理测试记录
+
+若要进一步核对数据库写入，可以在本地 MySQL 中根据消息里的 `id` 查询：
+
+```sql
+SELECT id, `desc`, contact FROM feedbacks WHERE id = 这里替换为消息里的数字id;
+```
+
+这条 SQL 里的中文占位需要换成真实数字再执行。确认记录含有本次测试标记后，也可以按相同 `id` 删除这条测试反馈。不过，删除数据库记录不会自动删除 RabbitMQ 中的消息，两边需要分别清理。
+
+测试结束后，在 RabbitMQ 管理页面进入 **Queues and Streams → feedback_queue**，根据队列中的内容选择清理方式：
+
+- 如果本地队列里全是可以删除的测试消息，展开 **Purge**，点击 **Purge Messages**，即可清空等待消费的消息，队列和绑定关系会保留。
+- 如果只想取出并移除少量消息，可以在 **Get messages** 中将数量设为 `1`，确认模式选择 **Ack message requeue false**。注意，这会直接移除本次取出的消息，不能先按 `$testMarker` 筛选再删除。只有确认接下来取出的消息都可以删除时才使用，不要误删其他反馈。
+
+如果 RabbitMQ 重启过，后端也要重启，再重新提交一次测试反馈；当前连接不会自动重连。每次执行上面的提交命令都会新增一条反馈，所以不要反复点击而却忘了清理。
+
+### 6. 确认请求链路成功上报
+
+若你启用了 `[observability]`，可以顺手把 GreptimeDB 的最后一步测试也完成。
+
+确认 `endpoint` 为 `http://127.0.0.1:4000/v1/otlp`，并已在修改配置后重启后端。再请求几次 `http://127.0.0.1:8000/ping`。
+
+后端会批量上报 Trace，因此稍等几秒，再打开 `http://127.0.0.1:4000/dashboard`，在 SQL 查询界面执行：
+
+```sql
+SELECT * FROM public.opentelemetry_traces LIMIT 10;
+```
+
+这张表会在首次成功收到 Trace 后创建。若提示表不存在，先检查后端是否启用了 OTLP 上报，以及后端和 GreptimeDB 容器日志中有没有导出或写入失败的信息。
+
+如果本地已经有历史数据，仅查到旧记录还不能证明本次上报成功。可以在 Dashboard 的 Trace 查询界面选择刚才请求的时间范围，并按配置中的服务名查找，确认能看到本次 `/ping` 请求及其对应的 span。示例配置默认服务名是 `weihuda_backend`。
+
+看到本次请求的记录，则说明该链路已经跑通。若你没有启用可观测性，这一节可以跳过。
 
 ## 日常开发与收工
 
-后端通过 `cargo run` 启动后会占用当前终端，想执行其他命令时，新开一个终端就好。
+恭喜你🎉，如果你完成了上面的所有测试，那么你已经成功将本项目部署到本地了！（鼓掌）
 
 修改 Rust 代码后，需要在运行后端的终端中按 `Ctrl + C` 停止程序，再执行 `cargo run`，新的代码才会生效。只点保存，正在运行的后端不会自动更新。
 
@@ -405,7 +549,6 @@ docker compose -f docker-compose.dev.yml down
 | `/ping` 打不开 | `cargo run` 是否还在运行，监听地址和访问端口是否一致 |
 | 密码解密时报错 | 私钥文件路径、PKCS#8 格式，以及前后端的公私钥是否配套 |
 | 反馈没有进入队列 | RabbitMQ 是否运行，`feedback` 交换机及队列绑定是否存在；若 RabbitMQ 重启过，也重启一下后端 |
-
 如果还是解决不了，提问时尽量带上你执行的命令、完整报错和运行环境。截图或复制日志之前，记得遮住密码、令牌和私钥。
 
-希望到这里，你的后端已经顺利跑起来了。接下来，就可以放心地开始~~瞎折腾~~ 开发了 =P
+希望到这里，你的后端已经顺利跑起来了。接下来，就可以放心地开始 ~~瞎折腾~~ 开发了

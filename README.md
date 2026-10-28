@@ -9,6 +9,7 @@
 ## 快速开始
 
 环境准备、依赖配置与启动方式，详见 [部署与运行](docs/deploy.md)。
+若您需要更详细基础的部署教学，请参考 [详细部署教程](docs/deployment-walkthrough.md)
 
 ## 贡献
 
